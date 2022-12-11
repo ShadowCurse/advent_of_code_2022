@@ -4,7 +4,7 @@ const INPUT_FILE: &str = "../input.txt";
 
 fn main() -> Result<(), std::io::Error> {
     part_1()?;
-    // part_2()?;
+    part_2()?;
     Ok(())
 }
 
@@ -14,8 +14,7 @@ enum Size {
 }
 
 #[derive(Debug)]
-struct File<'a> {
-    name: &'a str,
+struct File {
     size: usize,
 }
 
@@ -39,9 +38,9 @@ impl Dir<'_> {
             .collect::<Vec<_>>();
         let self_size = sizes
             .iter()
-            .filter_map(|size| match size {
-                Size::FileSize(size) => Some(size),
-                Size::DirSize(_) => None,
+            .map(|size| match size {
+                Size::FileSize(size) => size,
+                Size::DirSize(dir_sizes) => dir_sizes.last().unwrap(),
             })
             .sum::<usize>();
         let mut sizes = sizes
@@ -59,7 +58,7 @@ impl Dir<'_> {
 
 #[derive(Debug)]
 enum VFSNode<'a> {
-    File(File<'a>),
+    File(File),
     Dir(Dir<'a>),
 }
 
@@ -72,7 +71,7 @@ impl VFSNode<'_> {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct VFS<'a> {
     cwd: usize,
     nodes: Vec<VFSNode<'a>>,
@@ -95,10 +94,7 @@ impl<'a> VFS<'a> {
     fn from_str(s: &'a str) -> Self {
         let mut vfs = VFS::new();
         let mut lines = s.lines().peekable();
-        // skip first command
-        let _ = lines.next();
         while let Some(command) = Command::extract(&mut lines) {
-            // println!("{command:?}");
             vfs.execute(command);
         }
         vfs
@@ -107,6 +103,16 @@ impl<'a> VFS<'a> {
     fn cwd_empty(&self) -> bool {
         match self.nodes[self.cwd] {
             VFSNode::Dir(ref dir) => dir.is_empty(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn cwd<'b>(&'b mut self) -> &'b Dir<'a>
+    where
+        'a: 'b,
+    {
+        match self.nodes[self.cwd] {
+            VFSNode::Dir(ref dir) => dir,
             _ => unreachable!(),
         }
     }
@@ -131,7 +137,6 @@ impl<'a> VFS<'a> {
                         match node {
                             VFSNode::Dir(ref mut ls_dir) => {
                                 ls_dir.parent = self.cwd;
-                                // println!("putting {} into map", ls_dir.name);
                                 self.dir_names_to_ids
                                     .insert((self.cwd, ls_dir.name), new_id);
                             }
@@ -141,20 +146,14 @@ impl<'a> VFS<'a> {
                         self.nodes.push(node);
                         self.cwd_mut().content.push(new_id);
                     }
-                } else {
-                    println!("skipping ls for command: {ls:?}. cwd: {:?}", self.cwd_mut());
                 }
             }
-            Command::Cd(cd) => match self.nodes[self.cwd] {
-                VFSNode::Dir(ref dir) => match cd {
-                    Cd::Up => self.cwd = dir.parent,
+            Command::Cd(cd) => match cd {
+                    Cd::Up => self.cwd = self.cwd().parent,
                     Cd::Dir(dir_name) => {
-                        // println!("{dir_name}");
                         self.cwd = self.dir_names_to_ids[&(self.cwd, dir_name)];
                     }
                 },
-                _ => unreachable!(),
-            },
         }
     }
 
@@ -184,7 +183,7 @@ impl<'a> Command<'a> {
         lines.next().map(|line| {
             let bytes = line.as_bytes();
             match &bytes[2..4] {
-                b"cd" => match &bytes[5..7] {
+                b"cd" => match &bytes[5..] {
                     b".." => Self::Cd(Cd::Up),
                     _ => Self::Cd(Cd::Dir(std::str::from_utf8(&bytes[5..]).unwrap())),
                 },
@@ -207,7 +206,6 @@ impl<'a> Command<'a> {
                                 }
                                 size => {
                                     let file = File {
-                                        name,
                                         size: size.parse().unwrap(),
                                     };
                                     VFSNode::File(file)
@@ -234,4 +232,39 @@ fn part_1() -> Result<(), std::io::Error> {
         .sum::<usize>();
     println!("sum: {sum}");
     Ok(())
+}
+
+fn part_2() -> Result<(), std::io::Error> {
+    let input = std::fs::read_to_string(INPUT_FILE)?;
+    let vfs = VFS::from_str(&input);
+    let all_sizes = vfs.all_dir_sizes();
+    let total = all_sizes.last().unwrap();
+    let total_free = 70000000 - total;
+    let need_to_free = 30000000 - total_free;
+
+    let min_to_delete = all_sizes
+        .iter()
+        .filter(|s| **s > need_to_free)
+        .min()
+        .unwrap();
+    println!("min_to_delete: {min_to_delete}");
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vfs() {
+        let input = "$ cd /\n$ ls\ndir a\n14848514 b.txt\n8504156 c.dat\ndir d\n$ cd a\n$ ls\ndir e\n29116 f\n2557 g\n62596 h.lst\n$ cd e\n$ ls\n584 i\n$ cd ..\n$ cd ..\n$ cd d\n$ ls\n4060174 j\n8033020 d.log\n5626152 d.ext\n7214296 k";
+        let vfs = VFS::from_str(input);
+        let all_sizes = vfs.all_dir_sizes();
+        let sizes = all_sizes
+            .iter()
+            .filter(|s| 100000 >= **s)
+            .collect::<Vec<_>>();
+        let sum = sizes.iter().copied().sum::<usize>();
+        assert_eq!(sum, 95437);
+    }
 }
