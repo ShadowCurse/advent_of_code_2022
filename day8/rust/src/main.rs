@@ -2,7 +2,7 @@ const INPUT_FILE: &str = "../input.txt";
 
 fn main() -> Result<(), std::io::Error> {
     part_1()?;
-    // part_2()?;
+    part_2()?;
     Ok(())
 }
 
@@ -81,6 +81,49 @@ impl Forest {
 
         visible.iter().sum()
     }
+
+    fn calc_scenic_score(&self) -> u32 {
+        let mut max = 0;
+        for x in 0..self.width {
+            for y in 0..self.height {
+                max = max.max(self.scenic_score_of_tree(x, y));
+            }
+        }
+        max
+    }
+
+    fn scenic_score_of_tree(&self, x: usize, y: usize) -> u32 {
+        let mut max_vis_up = 0;
+        for up_y in (0..y).rev() {
+            max_vis_up += 1;
+            if self.get(x, y) <= self.get(x, up_y) {
+                break;
+            }
+        }
+        let mut max_vis_down = 0;
+        for down_y in (y + 1)..self.height {
+            max_vis_down += 1;
+            if self.get(x, y) <= self.get(x, down_y) {
+                break;
+            }
+        }
+        let mut max_vis_left = 0;
+        for left_x in (0..x).rev() {
+            max_vis_left += 1;
+            if self.get(x, y) <= self.get(left_x, y) {
+                break;
+            }
+        }
+        let mut max_vis_right = 0;
+        for right_x in (x + 1)..self.width {
+            max_vis_right += 1;
+            if self.get(x, y) <= self.get(right_x, y) {
+                break;
+            }
+        }
+
+        max_vis_up * max_vis_down * max_vis_left * max_vis_right
+    }
 }
 
 fn part_1() -> Result<(), std::io::Error> {
@@ -88,6 +131,14 @@ fn part_1() -> Result<(), std::io::Error> {
     let forest = Forest::from_string(input);
     let visible = forest.calc_visible();
     println!("visible: {visible}");
+    Ok(())
+}
+
+fn part_2() -> Result<(), std::io::Error> {
+    let input = std::fs::read_to_string(INPUT_FILE)?;
+    let forest = Forest::from_string(input);
+    let max_scenic_score = forest.calc_scenic_score();
+    println!("max_scenic_score: {max_scenic_score}");
     Ok(())
 }
 
