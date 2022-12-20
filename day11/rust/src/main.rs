@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, ops::Add};
 
 fn main() -> Result<(), std::io::Error> {
     part_1()?;
@@ -41,6 +41,7 @@ impl Monkey {
         }
     }
 }
+
 
 fn get_monkeys() -> Vec<Monkey> {
     vec![
@@ -143,6 +144,107 @@ fn get_monkeys() -> Vec<Monkey> {
     ]
 }
 
+fn get_monkeys_2() -> Vec<Monkey> {
+    vec![
+        Monkey {
+            inspected: 0,
+            starting_items: vec![92, 73, 86, 83, 65, 51, 55, 93].into(),
+            operation: |old| (old * 5) % 9699690,
+            test: |val| {
+                if val % 11 == 0 {
+                    3
+                } else {
+                    4
+                }
+            },
+        },
+        Monkey {
+            inspected: 0,
+            starting_items: vec![99, 67, 62, 61, 59, 98].into(),
+            operation: |old| (old * old)  % 9699690,
+            test: |val| {
+                if val % 2 == 0 {
+                    6
+                } else {
+                    7
+                }
+            },
+        },
+        Monkey {
+            inspected: 0,
+            starting_items: vec![81, 89, 56, 61, 99].into(),
+            operation: |old| (old * 7) % 9699690,
+            test: |val| {
+                if val % 5 == 0 {
+                    1
+                } else {
+                    5
+                }
+            },
+        },
+        Monkey {
+            inspected: 0,
+            starting_items: vec![97, 74, 68].into(),
+            operation: |old| (old + 1) % 9699690,
+            test: |val| {
+                if val % 17 == 0 {
+                    2
+                } else {
+                    5
+                }
+            },
+        },
+        Monkey {
+            inspected: 0,
+            starting_items: vec![78, 73].into(),
+            operation: |old| (old + 3) % 9699690,
+            test: |val| {
+                if val % 19 == 0 {
+                    2
+                } else {
+                    3
+                }
+            },
+        },
+        Monkey {
+            inspected: 0,
+            starting_items: vec![50].into(),
+            operation: |old| (old + 5)  % 9699690,
+            test: |val| {
+                if val % 7 == 0 {
+                    1
+                } else {
+                    6
+                }
+            },
+        },
+        Monkey {
+            inspected: 0,
+            starting_items: vec![95, 88, 53, 75].into(),
+            operation: |old| (old + 8) % 9699690,
+            test: |val| {
+                if val % 3 == 0 {
+                    0
+                } else {
+                    7
+                }
+            },
+        },
+        Monkey {
+            inspected: 0,
+            starting_items: vec![50, 77, 98, 85, 94, 56, 89].into(),
+            operation: |old| (old + 2) % 9699690,
+            test: |val| {
+                if val % 13 == 0 {
+                    4
+                } else {
+                    0
+                }
+            },
+        },
+    ]
+}
+
 fn part_1() -> Result<(), std::io::Error> {
     let mut monkeys = get_monkeys();
     for _ in 0..20 {
@@ -162,7 +264,7 @@ fn part_1() -> Result<(), std::io::Error> {
 }
 
 fn part_2() -> Result<(), std::io::Error> {
-    let mut monkeys = get_monkeys();
+    let mut monkeys = get_monkeys_2();
     for _ in 0..10000 {
         for i in 0..monkeys.len() {
             while let Some((new_level, next_monkey)) = monkeys[i].inspect_2() {
